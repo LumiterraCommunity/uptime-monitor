@@ -4,6 +4,8 @@ import NotifmeSdk, { EmailProvider, SlackProvider, SmsProvider } from "notifme-s
 import { replaceEnvironmentVariables } from "./environment";
 import { getSecret } from "./secrets";
 
+import * as lark from '@larksuiteoapi/node-sdk';
+
 const channels: {
   email?: Channel<EmailProvider>;
   sms?: Channel<SmsProvider>;
@@ -350,9 +352,60 @@ export const sendNotification = async (message: string) => {
     console.log("Finished sending Telegram");
   }
   if (getSecret("NOTIFICATION_LARK")) {
+    const client = new lark.Client({
+      appId: getSecret("NOTIFICATION_LARK_APP_ID") as string,
+      appSecret: getSecret("NOTIFICATION_LARK_APP_SECRET") as string,
+      // disableTokenCache为true时，SDK不会主动拉取并缓存token，这时需要在发起请求时，调用lark.withTenantToken("token")手动传递
+      // disableTokenCache为false时，SDK会自动管理租户token的获取与刷新，无需使用lark.withTenantToken("token")手动传递token
+      disableTokenCache: false
+    });
+
+    const messageResponse = await client.im.message.create({
+      params: {
+        receive_id_type: 'chat_id',
+      },
+      data: {
+        receive_id: getSecret("NOTIFICATION_LARK_CHAT_ID") as string,
+        msg_type: 'interactive',
+        content: JSON.stringify({
+          "config": {
+            "wide_screen_mode": true
+          },
+          "elements": [
+            {
+              "tag": "markdown",
+              "content": message.replace(/_/g, '\\_'),
+            }
+          ]
+        }),
+      },
+    });
+
+    // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
+    if (getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
+      const userIds = getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID")?.split(",") ?? [];
+       // 发送加急
+       await client.im.message.urgentPhone({
+        path: {
+          message_id: messageResponse.data?.message_id as string,
+        },
+        data: {
+          user_id_list: userIds,
+        },
+        params: {
+          user_id_type: "open_id",
+        },
+       });
+    }
+
+    console.log("Success Lark");
+
+    return;
+
+    
     console.log("Sending Lark");
     try {
-      await axios.post(
+      const response = await axios.post(
         `${getSecret("NOTIFICATION_LARK_BOT_WEBHOOK")}`,
         {
           "msg_type": "interactive",
@@ -369,7 +422,9 @@ export const sendNotification = async (message: string) => {
           }
         }
       );
-      console.log("Success Lark");
+
+
+      
     } catch (error) {
       console.log("Got an error", error);
     }
