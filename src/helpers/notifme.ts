@@ -398,7 +398,7 @@ export const sendNotification = async (message: string) => {
        });
     }
 
-    console.log("Success Lark");
+    console.log("Success Lark",1);
 
     return;
 
