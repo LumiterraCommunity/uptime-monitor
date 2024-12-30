@@ -382,7 +382,7 @@ export const sendNotification = async (message: string) => {
       },
     });
 
-    console.log("messageResponse::::",messageResponse)
+    // console.log("messageResponse::::",messageResponse)
 
     // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
     if (getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
@@ -400,34 +400,26 @@ export const sendNotification = async (message: string) => {
         },
        });
     }
+    console.log("Success Lark");
 
-    console.log("Success Lark",1);
-
-    return;
-
-
-    console.log("Sending Lark");
     try {
-      const response = await axios.post(
-        `${getSecret("NOTIFICATION_LARK_BOT_WEBHOOK")}`,
-        {
-          "msg_type": "interactive",
-          "card": {
-            "config": {
-              "wide_screen_mode": true
-            },
-            "elements": [
-              {
-                "tag": "markdown",
-                "content": message.replace(/_/g, '\\_'),
-              }
-            ]
-          }
-        }
-      );
-
-
-
+      // const response = await axios.post(
+      //   `${getSecret("NOTIFICATION_LARK_BOT_WEBHOOK")}`,
+      //   {
+      //     "msg_type": "interactive",
+      //     "card": {
+      //       "config": {
+      //         "wide_screen_mode": true
+      //       },
+      //       "elements": [
+      //         {
+      //           "tag": "markdown",
+      //           "content": message.replace(/_/g, '\\_'),
+      //         }
+      //       ]
+      //     }
+      //   }
+      // );
     } catch (error) {
       console.log("Got an error", error);
     }
