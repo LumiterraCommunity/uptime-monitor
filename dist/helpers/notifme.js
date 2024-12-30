@@ -351,6 +351,7 @@ const sendNotification = async (message) => {
         console.log("Finished sending Telegram");
     }
     if ((0, secrets_1.getSecret)("NOTIFICATION_LARK")) {
+        console.log("ready lark sending........");
         const client = new lark.Client({
             appId: (0, secrets_1.getSecret)("NOTIFICATION_LARK_APP_ID"),
             appSecret: (0, secrets_1.getSecret)("NOTIFICATION_LARK_APP_SECRET"),
@@ -378,6 +379,7 @@ const sendNotification = async (message) => {
                 }),
             },
         });
+        console.log("messageResponse::::", messageResponse);
         // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
         if ((0, secrets_1.getSecret)("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
             const userIds = (0, secrets_1.getSecret)("NOTIFICATION_LARK_PHONE_CALL_USER_ID")?.split(",") ?? [];
