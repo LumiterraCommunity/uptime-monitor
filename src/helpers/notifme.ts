@@ -283,7 +283,7 @@ export const sendNotification = async (message: string) => {
         visibility: visibility,
         status: message,
       },
-      { 
+      {
         headers: {
           "Authorization": `Bearer ${getSecret("NOTIFICATION_MASTODON_API_KEY")}`
         }
@@ -352,6 +352,7 @@ export const sendNotification = async (message: string) => {
     console.log("Finished sending Telegram");
   }
   if (getSecret("NOTIFICATION_LARK")) {
+    console.log("ready lark sending........")
     const client = new lark.Client({
       appId: getSecret("NOTIFICATION_LARK_APP_ID") as string,
       appSecret: getSecret("NOTIFICATION_LARK_APP_SECRET") as string,
@@ -381,6 +382,8 @@ export const sendNotification = async (message: string) => {
       },
     });
 
+    console.log("messageResponse::::",messageResponse)
+
     // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
     if (getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
       const userIds = getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID")?.split(",") ?? [];
@@ -402,7 +405,7 @@ export const sendNotification = async (message: string) => {
 
     return;
 
-    
+
     console.log("Sending Lark");
     try {
       const response = await axios.post(
@@ -424,7 +427,7 @@ export const sendNotification = async (message: string) => {
       );
 
 
-      
+
     } catch (error) {
       console.log("Got an error", error);
     }
