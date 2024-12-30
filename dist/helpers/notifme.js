@@ -1,4 +1,27 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -8,6 +31,7 @@ const axios_1 = __importDefault(require("axios"));
 const notifme_sdk_1 = __importDefault(require("notifme-sdk"));
 const environment_1 = require("./environment");
 const secrets_1 = require("./secrets");
+const lark = __importStar(require("@larksuiteoapi/node-sdk"));
 const channels = {};
 if ((0, secrets_1.getSecret)("NOTIFICATION_EMAIL_SENDGRID") ||
     (0, secrets_1.getSecret)("NOTIFICATION_EMAIL_SES") ||
@@ -327,9 +351,54 @@ const sendNotification = async (message) => {
         console.log("Finished sending Telegram");
     }
     if ((0, secrets_1.getSecret)("NOTIFICATION_LARK")) {
+        const client = new lark.Client({
+            appId: (0, secrets_1.getSecret)("NOTIFICATION_LARK_APP_ID"),
+            appSecret: (0, secrets_1.getSecret)("NOTIFICATION_LARK_APP_SECRET"),
+            // disableTokenCache为true时，SDK不会主动拉取并缓存token，这时需要在发起请求时，调用lark.withTenantToken("token")手动传递
+            // disableTokenCache为false时，SDK会自动管理租户token的获取与刷新，无需使用lark.withTenantToken("token")手动传递token
+            disableTokenCache: false
+        });
+        const messageResponse = await client.im.message.create({
+            params: {
+                receive_id_type: 'chat_id',
+            },
+            data: {
+                receive_id: (0, secrets_1.getSecret)("NOTIFICATION_LARK_CHAT_ID"),
+                msg_type: 'interactive',
+                content: JSON.stringify({
+                    "config": {
+                        "wide_screen_mode": true
+                    },
+                    "elements": [
+                        {
+                            "tag": "markdown",
+                            "content": message.replace(/_/g, '\\_'),
+                        }
+                    ]
+                }),
+            },
+        });
+        // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
+        if ((0, secrets_1.getSecret)("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
+            const userIds = (0, secrets_1.getSecret)("NOTIFICATION_LARK_PHONE_CALL_USER_ID")?.split(",") ?? [];
+            // 发送加急
+            await client.im.message.urgentPhone({
+                path: {
+                    message_id: messageResponse.data?.message_id,
+                },
+                data: {
+                    user_id_list: userIds,
+                },
+                params: {
+                    user_id_type: "open_id",
+                },
+            });
+        }
+        console.log("Success Lark", 1);
+        return;
         console.log("Sending Lark");
         try {
-            await axios_1.default.post(`${(0, secrets_1.getSecret)("NOTIFICATION_LARK_BOT_WEBHOOK")}`, {
+            const response = await axios_1.default.post(`${(0, secrets_1.getSecret)("NOTIFICATION_LARK_BOT_WEBHOOK")}`, {
                 "msg_type": "interactive",
                 "card": {
                     "config": {
@@ -343,7 +412,6 @@ const sendNotification = async (message) => {
                     ]
                 }
             });
-            console.log("Success Lark");
         }
         catch (error) {
             console.log("Got an error", error);
