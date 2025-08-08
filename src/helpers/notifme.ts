@@ -387,6 +387,10 @@ export const sendNotification = async (message: string) => {
     // 字符串匹配，如果匹配到了 is back up 关键字的话，就无需要发送加急（因为服务已经恢复了）
     if (getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID") && !message.includes("is back up")) {
       const userIds = getSecret("NOTIFICATION_LARK_PHONE_CALL_USER_ID")?.split(",") ?? [];
+      if (userIds.length < 1) {
+        console.log("No user ids to send phone call");
+        return;
+      }
        // 发送加急
        const urgentPhoneResponse = await client.im.message.urgentPhone({
         path: {
